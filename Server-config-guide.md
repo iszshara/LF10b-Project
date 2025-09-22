@@ -96,7 +96,7 @@ sudo COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader
 sudo php artisan key:generate --force
 ```
 
-Backuo encryption key 
+Backup encryption key 
 ```bash
 grep APP_KEY /var/www/pterodactyl/.env > /home/lf10b/APIKEY_backup
 ```
@@ -110,7 +110,7 @@ sudo php artisan p:environment:database
 ```JSON
 Config {
     "Author Mail" : "example@exchange.com",
-    "Application URL" : "http://192.168.65.160/panel",
+    "Application URL" : "http://192.168.65.161/panel",
     "Timezone": "UTC",
     "Cache Driver" : "redis",
     "Session Driver" : "redis",
@@ -422,10 +422,11 @@ ServerProperties{
     }
     "Server Version": 
 }
-
+```
 Create Server
 
 Go to the icon in the tab bar on the most right (no tag)
 Wait for Docker Container to Build (Took about 4min)
 Accept the EULA with `I accept` button
 Connect to server with minecraft the set IP
+
