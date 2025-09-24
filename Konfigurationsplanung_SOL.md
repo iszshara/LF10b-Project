@@ -38,7 +38,7 @@ Für das Projekt sollen Virtuelle Maschinen in VMware Fusion / VMware Workstatio
 Pterodactyl stellt die Spieleserver per Docker bereit. Isolation, Portfreigaben und Ressourcenlimits werden durch Docker geregelt. Das Dashboard läuft nativ auf der VM.
 
 # Geplante RTO zeit
-30 Minuten
+2 Stunden
 
 # Überwachte Systemeigenschaften
 ## Pterodactyl
@@ -89,12 +89,12 @@ Die Wiederherstellung des Servers bspw. durch Ausfall aller Festplatten oder gen
 
 ### Monitoring
 *   **Install Prometheus & Grafana on Ubuntu:** https://www.linode.com/docs/guides/install-prometheus-and-grafana-on-ubuntu/
-*   **Minecraft Exporter Plugin (Spigot/Paper):** https://github.com/sladkoff/minecraft-prometheus-exporter
+*   **Pterodactyl Dashboard** https://grafana.com/grafana/dashboards/16575-pterodactyl-server/
+*   **Pterodactyl Exporter** https://github.com/LOENS2/pterodactyl_exporter
 *   **Minecraft Exporter Standalone (Docker):** https://github.com/dirien/minecraft-prometheus-exporter
 
 ### Backups
-*   **Restic Backup (Official Docs):** https://restic.readthedocs.io/en/stable/
-*   **Restic Tutorial:** https://www.tecmint.com/restic-linux-backup-utility/
+*   **Borg Backup (German Tutorial)** https://de.linux-terminal.com/?p=4514
 
 ### Automation & Security
 *   **Ansible Getting Started (Official Docs):** https://docs.ansible.com/ansible/latest/user_guide/index.html

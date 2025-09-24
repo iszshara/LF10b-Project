@@ -23,6 +23,14 @@ Setup Configuration {
 }
 ```
 
+# Ports used
+Port | Service
+--- | ---
+25565 | Minecraft Server (Pterodactyl)
+9090 | Prometheus
+3000 | Grafana
+9100 | node exporter
+
 ## System Update
 nach reboot ausführen:
 `sudo apt update && sudo apt upgrade -y`
@@ -32,6 +40,10 @@ nach reboot ausführen:
 <!-- might be smart to run as root-user -->
 ## Dependency installation
 ```BASH
+
+sudo apt install net-tools -y
+sudo apt install tree -y
+
 # Add "add-apt-repository" command
 sudo apt -y install software-properties-common curl apt-transport-https ca-certificates gnupg
 
@@ -430,3 +442,252 @@ Wait for Docker Container to Build (Took about 4min)
 Accept the EULA with `I accept` button
 Connect to server with minecraft the set IP
 
+# Monitoring (23 Sept 2025)
+
+## Install node exporter (Prometheus)
+
+```bash
+curl -LO https://github.com/prometheus/node_exporter/releases/download/v1.9.1/node_exporter-1.9.1.linux-arm64.tar.gz # Download packages
+tar xzf node_exporter-1.9.1.linux-arm64.tar.gz  # Extract tar package
+sudo mv node_exporter-1.9.1.linux-arm64/node_exporter /usr/local/bin/
+sudo useradd --no-create-home --shell /usr/sbin/nologin node_exporter || true # Create user for node explorer
+sudo chown node_exporter:node_exporter /usr/local/bin/node_exporter
+```
+
+Create SystemD Service for node explorer
+
+```bash
+sudo nano /etc/systemd/system/node_exporter.service
+```
+
+```systemd
+[Unit]
+Description=Prometheus Node Exporter
+After=network.target
+
+[Service]
+User=node_exporter
+Group=node_exporter
+ExecStart=/usr/local/bin/node_exporter
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable Daemon
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now node_exporter
+```
+
+## Expose Minecraft metrics
+! Works only on Vanilla or Fabric Minecraft Servers
+
+### Enable RCON in Server Properties
+
+In Pterodactyl go to the server > `Files` and open `server.properties`
+
+Change the following lines to the shown values
+
+```server.properties
+enable-rcon=true
+rcon.password=rconPW
+rcon.port=25575
+```
+
+Click `Save Content` at the bottom
+
+Restart the Server (Minecraft server)
+
+### Run minecraft exporter Container
+
+```bash
+sudo docker run -d \
+  --name=minecraft-exporter \
+  -e RCON_HOST=127.0.0.1 \
+  -e RCON_PORT=25575 \
+  -e RCON_PASSWORD=rconPW \
+  -p 9150:9150 \
+  heathcliff26/minecraft-exporter:latest
+```
+
+<!-- Snapshot 3 -->
+
+## Grafana + Prometheus install
+### Prometheus
+
+For security reasons, we'll create a dedicated user for Prometheus.
+
+```bash
+sudo useradd --no-create-home --shell /bin/false prometheus
+```
+
+Download the latest Prometheus version, extract it, and move the files to the appropriate directories.
+
+```bash
+curl -LO https://github.com/prometheus/prometheus/releases/download/v2.52.0/prometheus-2.52.0.linux-arm64.tar.gz
+tar xvf prometheus-2.52.0.linux-arm64.tar.gz
+sudo mkdir /etc/prometheus
+sudo mkdir /var/lib/prometheus
+sudo mv prometheus-2.52.0.linux-arm64/prometheus /usr/local/bin/
+sudo mv prometheus-2.52.0.linux-arm64/promtool /usr/local/bin/
+sudo mv prometheus-2.52.0.linux-arm64/consoles /etc/prometheus
+sudo mv prometheus-2.52.0.linux-arm64/console_libraries /etc/prometheus
+sudo mv prometheus-2.52.0.linux-arm64/prometheus.yml /etc/prometheus/prometheus.yml
+```
+
+Set the ownership of the directories and files.
+
+```bash
+sudo chown prometheus:prometheus /etc/prometheus
+sudo chown prometheus:prometheus /var/lib/prometheus
+sudo chown -R prometheus:prometheus /etc/prometheus/consoles
+sudo chown -R prometheus:prometheus /etc/prometheus/console_libraries
+```
+
+Now, we need to configure Prometheus to scrape metrics from our exporters. Open the Prometheus configuration file:
+
+```bash
+sudo nano /etc/prometheus/prometheus.yml
+```
+
+And replace the content with the following:
+
+```yaml
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name:   
+    'prometheus'   
+    static_configs:
+      - targets: ['localhost:9090']
+  
+  - job_name: 'node_exporter'
+    static_configs:
+      - targets: ['localhost:9100']
+  
+  - job_name: 'minecraft'
+    static_configs:
+      - targets: ['localhost:9150']
+```
+
+To run Prometheus as a service, create a systemd service file.
+
+```bash
+sudo nano /etc/systemd/system/prometheus.service
+```
+
+Paste the following content into the file:
+
+```systemd
+[Unit]
+Description=Prometheus
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=prometheus
+Group=prometheus
+Type=simple
+ExecStart=/usr/local/bin/prometheus \
+    --config.file /etc/prometheus/prometheus.yml \
+    --storage.tsdb.path /var/lib/prometheus/ \
+    --web.console.templates=/etc/prometheus/consoles \
+    --web.console.libraries=/etc/prometheus/console_libraries
+    
+[Install]
+WantedBy=multi-user.target
+```
+
+Reload systemd and start the Prometheus service.
+    
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now prometheus
+```
+
+You can check the status of the service with `sudo systemctl status prometheus`. Prometheus should now be running on port 9090.
+
+For some reason (most definitely fucking Linux) I needed to wait for about 30s and restart the service#
+```bash
+sudo systemctl restart prometheus.service
+sudo systemctl status prometheus.service
+```
+
+It should now be running
+
+### Grafana
+
+Install Grafana
+
+```bash
+sudo apt-get install -y apt-transport-https software-properties-common
+wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
+echo "deb https://packages.grafana.com/oss/deb stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list
+sudo apt-get update
+sudo apt-get install -y grafana
+```
+
+Start Grafana
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now grafana-server
+```
+Again the status of the grafana-server can be checked with `systemctl status grafana-server.service` I highly recommend to check first if it is running. Because of linux
+
+Grafana will be running on port 3000. You can access it by navigating to `http://192.168.65.161:3000`. The default login is `admin` with the password `admin`. You will be prompted to change the password after your first login.
+
+I changed it to "changeme"
+
+### Configure Grafana
+1.  Log in to your Grafana dashboard.
+2.  Click **Data Sources** on the left sidebar.
+3.  Clic on **Add data source** and select (Double click) **Prometheus**.
+4.  In the HTTP section, set the URL to `http://localhost:9090`.
+5.  Click **Save & Test**. You should see a "Successfully queried the Prometheus API" message.
+
+
+Import a Dashboard for Node Exporter
+
+
+Grafana has a vast library of pre-built dashboards. We will import a popular one for the node exporter.
+
+1.  On the left sidebar, click on **Dashboard** and select **Create dashboard**.
+2. Click `Import dashbard`
+2.  In the "Import via grafana.com" field, enter the dashboard ID `1860` and click **Load**.
+3.  On the next screen, select your Prometheus data source and click **Import**.
+
+### Troubleshooting 1
+```bash
+lf10b@main:~$ sudo ls -l /var/lib/pterodactyl/
+total 32
+drwx------ 2 root root  4096 Aug 28 16:44 archives
+drwx------ 2 root root  4096 Sep 23 11:48 backups
+-rw-r--r-- 1 root root    50 Sep 24 10:44 states.json
+drwx------ 4 root root  4096 Aug 29 18:25 volumes
+-rw-r--r-- 1 root root 16384 Sep 24 10:08 wings.db
+lf10b@main:~$ sudo docker ps -a
+CONTAINER ID   IMAGE                                    COMMAND                  CREATED          STATUS                    PORTS                                                              NAMES
+6fef2fe7c63c   ghcr.io/pterodactyl/yolks:java_21        "/__cacert_entrypoin…"   36 minutes ago   Up 36 minutes             192.168.65.161:25565->25565/tcp, 192.168.65.161:25565->25565/udp   f2fdf9ed-7435-4d95-be54-bcbc32d94ad3
+e94658b2f6a9   heathcliff26/minecraft-exporter:latest   "/minecraft-exporter"    23 hours ago     Exited (1) 23 hours ago                                                                      minecraft-exporter
+```
+
+Remove old exited docker container
+
+```bash
+sudo docker rm minecraft-exporter
+```
+
+```bash
+sudo docker run -d \
+    --name=minecraft-exporter \
+    -e RCON_HOST=127.0.0.1 \
+    -e RCON_PORT=25575 \
+    -e RCON_PASSWORD=rconPW \
+    -p 9150:9150 \
+    -v /var/lib/pterodactyl/volumes/f2fdf9ed-7435-4d95-be54-bcbc32d94ad3/world:/world \
+        heathcliff26/minecraft-exporter:latest
+```
