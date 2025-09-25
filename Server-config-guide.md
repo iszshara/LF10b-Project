@@ -23,6 +23,32 @@ Setup Configuration {
 }
 ```
 
+# Set static IPs
+
+```bash
+sudo nano /etc/netplan/50-cloud-init.yaml
+```
+
+```yaml
+network:
+  version: 2
+  ethernets:
+    ens160:
+      dhcp4: no
+      addresses:
+        - 192.168.65.161/24
+      nameservers:
+        addresses: [8.8.8.8, 8.8.4.4]
+    ens192:
+      dhcp4: true
+    ens224:
+      dhcp4: true
+```
+
+```bash
+sudo netplan apply
+```
+
 # Ports used
 Port | Service
 --- | ---
@@ -691,3 +717,4 @@ sudo docker run -d \
     -v /var/lib/pterodactyl/volumes/f2fdf9ed-7435-4d95-be54-bcbc32d94ad3/world:/world \
         heathcliff26/minecraft-exporter:latest
 ```
+
