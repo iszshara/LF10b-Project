@@ -7,6 +7,17 @@
 
 - name: Download Pterodactyl
   ansible.builtin.unarchive:
-    url: https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz
+    src: https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz
     dest: /var/www/pterodactyl
     mode: '0775' 
+    remote_src: yes
+
+- name: Set correct permissions for storage
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    recurse: true
+  loop:
+    - /var/www/pterodactyl/storage/*
+    - /var/www/pterodactyl/bootstrap/cache 
