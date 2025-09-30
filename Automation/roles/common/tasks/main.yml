@@ -6,6 +6,17 @@
 - name: Add additional repositories for PHP (Ubuntu 22.04)
   ansible.builtin.shell: LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
 
+- name: Cleanup temporary key file
+  ansible.builtin.file:
+    path: /etc/apt/keyrings/redis_key.gpg
+    state: absent
+  become: true
+
+- name: Check status of GPG Key
+  ansible.builtin.stat:
+    path: /usr/share/keyrings/redis-archive-keyrings.gpg
+  register: redis_key_status
+
 - name: Add redis official APT Repository GPG key
   ansible.builtin.get_url:
     url: https://packages.redis.io/gpg
@@ -16,6 +27,13 @@
 - name: Dearmor gpg key
   ansible.builtin.command:
     cmd: gpg --dearmor -o /usr/share/keyrings/redis-archive-keyrings.gpg /etc/apt/keyrings/redis_key.gpg
+  when: not redis_key_status.stat.exists
+
+- name: Cleanup temporary key file
+  ansible.builtin.file:
+    path: /etc/apt/keyrings/redis_key.gpg
+    state: absent
+  become: true
 
 - name: Update
   ansible.builtin.command: apt update
@@ -25,11 +43,6 @@
 
 - name: Installing Composer
   ansible.builtin.shell: curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
-
-- name: Creating a folder for pterodactyl
-  ansible.builtin.file:
-    path: /home/luis/
-    state: directory
 
 
 
