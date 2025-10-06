@@ -37,4 +37,19 @@
     state: present
     login_user: root
     login_password: "{{ mariadb_root_password }}"
-    
+
+- name: Copy default environment settings
+  ansible.builtin.copy:
+    src: /var/www/pterodactyl/.env.example
+    dest: /var/www/pterodactyl/.env
+    remote_src: yes
+
+- name: Install Core dependency
+  ansible.builtin.shell: 
+    cmd: COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader
+    chdir: /var/www/pterodactyl
+
+- name: Generate new application key
+  ansible.builtin.shell: 
+    cmd: php artisan key:generate --force
+    chdir: /var/www/pterodactyl
