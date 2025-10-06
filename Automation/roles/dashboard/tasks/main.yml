@@ -21,3 +21,5 @@
   loop:
     - /var/www/pterodactyl/storage/*
     - /var/www/pterodactyl/bootstrap/cache 
+
+

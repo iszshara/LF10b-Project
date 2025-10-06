@@ -1,0 +1,40 @@
+---
+
+- name: Ensure MariaDB is installed
+  ansible.builtin.package:
+    name: mariadb-server
+    state: present
+
+- name: Ensure MariaDB is running
+  ansible.builtin.service:
+    name: mariadb
+    enabled: true
+    state: started
+
+- name: Pterodactyl Datenbank erstellen
+  community.mysql.mysql_db:
+    name: "{{ pterodactyl_db_name }}"
+    state: present
+    login_user: root
+    login_password: "{{ mariadb_root_password }}"
+
+- name: Create Pterodactyl User with sufficient permissions
+  community.mysql.mysql_user:
+    name: "{{ pterodactyl_db_name }}"
+    password: "{{ pterodactyl_db_password }}"
+    priv: '{{ pterodactyl_db_password }}.*:ALL'
+    host: "%"
+    state: present
+    login_user: root
+    login_password: "{{ mariadb_root_password }}"
+
+- name: Make sure that the Pterodactyl user is able to connect from the localhost
+  community.mysql.mysql_user:
+    name: "{{ pterodactyl_db_name }}"
+    password: "{{ pterodactyl_db_password }}"
+    priv: '{{ pterodactyl_db_password }}.*:ALL'
+    host: "localhost"
+    state: present
+    login_user: root
+    login_password: "{{ mariadb_root_password }}"
+    

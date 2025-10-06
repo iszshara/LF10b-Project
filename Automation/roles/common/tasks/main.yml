@@ -39,7 +39,7 @@
   ansible.builtin.command: apt update
 
 - name: Install dependencies
-  ansible.builtin.shell: apt -y install php8.3 php8.3-common php8.3-cli php8.3-gd php8.3-mysql php8.3-mbstring php8.3-bcmath php8.3-xml php8.3-fpm php8.3-curl php8.3-zip mariadb-server nginx tar unzip git redis-server
+  ansible.builtin.shell: apt -y install php8.3 php8.3-common php8.3-cli php8.3-gd php8.3-mysql php8.3-mbstring php8.3-bcmath php8.3-xml php8.3-fpm php8.3-curl php8.3-zip mariadb-server nginx tar unzip git redis-server python3-mysqldb mariadb-server
 
 - name: Installing Composer
   ansible.builtin.shell: curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
